@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Furigana Editor</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f2f2f2;
+    }
+    h2 { margin-top: 1.5rem; }
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    input[type="text"] {
+      padding: 0.5rem;
+      font-size: 1rem;
+      flex: 1;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .controls {
+      margin-top: 8px;
+    }
+    .preview, .html-code {
+      border: 1px solid #ccc;
+      padding: 1rem;
+      border-radius: 8px;
+      background: white;
+      min-height: 50px;
+    }
+    .word {
+      padding: 2px 6px;
+      margin: 2px;
+      background: #dbeafe;
+      border-radius: 4px;
+      display: inline-block;
+      cursor: pointer;
+    }
+    .selected {
+      background: #facc15;
+    }
+    .html-code {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: #f0f0f0;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h2>Furigana Editor</h2>
+  <div class="input-group">
+    <input type="text" id="word" placeholder="漢字 or お[前:まえ]は or kana">
+    <input type="text" id="furigana" placeholder="ふりがな (optional)">
+    <button onclick="addOrUpdateWord()">Save</button>
+  </div>
+
+  <h2>Sentence Preview (Editable)</h2>
+  <div class="preview" id="preview"></div>
+
+  <div class="controls">
+    <button onclick="removeSelected()">Delete Selected</button>
+    <button onclick="deselectAll()">Unselect</button>
+  </div>
+
+  <h2>HTML Code</h2>
+  <div class="html-code" id="htmlOutput"></div>
+<p>Clear cache to clear all data</p>
+  <script>
+    let sentence = JSON.parse(localStorage.getItem('sentence')) || [];
+    let selectedIndex = null;
+
+    function hasEmbeddedFurigana(text) {
+      return /\[.+?:.+?\]/.test(text);
+    }
+
+    function renderSentence() {
+      const container = document.getElementById('preview');
+      container.innerHTML = '';
+      sentence.forEach((w, i) => {
+        const el = document.createElement('span');
+        el.className = 'word';
+        if (selectedIndex === i) el.classList.add('selected');
+        el.onclick = () => selectWord(i);
+
+        if (hasEmbeddedFurigana(w.word)) {
+          el.innerHTML = convertEmbeddedToRuby(w.word);
+        } else if (w.furigana) {
+          el.innerHTML = `<ruby>${w.word}<rt>${w.furigana}</rt></ruby>`;
+        } else {
+          el.textContent = w.word;
+        }
+
+        container.appendChild(el);
+      });
+      renderHTML();
+      saveToLocalStorage();
+    }
+
+    function convertEmbeddedToRuby(text) {
+      return text.replace(/\[(.+?):(.+?)\]/g, (_, kanji, reading) => {
+        return `<ruby>${kanji}<rt>${reading}</rt></ruby>`;
+      });
+    }
+
+    function renderHTML() {
+      const html = sentence.map(w => {
+        if (hasEmbeddedFurigana(w.word)) {
+          return convertEmbeddedToRuby(w.word);
+        } else if (w.furigana) {
+          return `<ruby>${w.word}<rt>${w.furigana}</rt></ruby>`;
+        } else {
+          return w.word;
+        }
+      }).join('');
+      document.getElementById('htmlOutput').textContent = html;
+    }
+
+    function addOrUpdateWord() {
+      const word = document.getElementById('word').value.trim();
+      const furigana = document.getElementById('furigana').value.trim();
+
+      if (!word) return;
+
+      const newItem = { word, furigana };
+
+      if (selectedIndex != null) {
+        sentence[selectedIndex] = newItem;
+        selectedIndex = null;
+      } else {
+        sentence.push(newItem);
+      }
+
+      document.getElementById('word').value = '';
+      document.getElementById('furigana').value = '';
+      renderSentence();
+    }
+
+    function selectWord(index) {
+      selectedIndex = (selectedIndex === index) ? null : index;
+      if (selectedIndex != null) {
+        document.getElementById('word').value = sentence[selectedIndex].word;
+        document.getElementById('furigana').value = sentence[selectedIndex].furigana || '';
+      } else {
+        document.getElementById('word').value = '';
+        document.getElementById('furigana').value = '';
+      }
+      renderSentence();
+    }
+
+    function removeSelected() {
+      if (selectedIndex != null) {
+        sentence.splice(selectedIndex, 1);
+        selectedIndex = null;
+        renderSentence();
+      }
+    }
+
+    function deselectAll() {
+      selectedIndex = null;
+      document.getElementById('word').value = '';
+      document.getElementById('furigana').value = '';
+      renderSentence();
+    }
+
+    function saveToLocalStorage() {
+      localStorage.setItem('sentence', JSON.stringify(sentence));
+    }
+
+    // Initial load
+    renderSentence();
+  </script>
+</body>
+</html>
