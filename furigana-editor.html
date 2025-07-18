@@ -65,7 +65,7 @@
     <button onclick="addOrUpdateWord()">Save</button>
   </div>
 
-  <h2>Sentence Preview (Editable)</h2>
+  <h2>Sentence Preview</h2>
   <div class="preview" id="preview"></div>
 
   <div class="controls">
@@ -75,7 +75,6 @@
 
   <h2>HTML Code</h2>
   <div class="html-code" id="htmlOutput"></div>
-<p>Clear cache to clear all data</p>
   <script>
     let sentence = JSON.parse(localStorage.getItem('sentence')) || [];
     let selectedIndex = null;
